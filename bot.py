@@ -119,7 +119,7 @@ class DataBase:
             with self.con.cursor() as cur:
                 cur.execute('SELECT name from USERIDS where userId=%s',(userID,))
                 name = cur.fetchone()
-                if name: return name,
+                if name: return name[0]
 
 
     def checkIfRegisteredUser(self, user):
