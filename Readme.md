@@ -13,7 +13,7 @@
 Telegram bots are an extremely handy tool to send automated notifications/messages directly to the phone. It's completely free, easy to set up, and you can send any kind of message, including documents, pictures, videos etc. Here, I have made a bot to keep track of my long-running computer jobs so that it can send me a notification when the job finishes/fails.
 
 
-### 🐱‍🏍Getting Started:
+### 🚀 Getting Started:
 - Open the Telegram bot at https://t.me/JobReminderBot and press `start` to get started. Wait for the admin to authorize you.
 - Download the `telebot` script (only written for bash atm), make it executable and keep it in your `PATH`.
 - Submit your job with the shell script as
