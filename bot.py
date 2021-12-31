@@ -34,7 +34,7 @@ class DataBase:
                 "status TEXT NOT NULL,"
                 "job TEXT NOT NULL);"
                 "CREATE TABLE IF NOT EXISTS USERIDS ("
-                " userid INTEGER NOT NULL UNIQUE," 
+                " userid INTEGER NOT NULL UNIQUE,"
                 " name TEXT NOT NULL);"
                 "INSERT into USERIDS (userid,name) values (%s,%s) "
                 "ON CONFLICT (userid) DO NOTHING",(ADMIN,ADMIN_NAME)
@@ -315,4 +315,3 @@ def webhook():
 if __name__ == "__main__":
     from waitress import serve
     serve(server, host="0.0.0.0", port=int(os.environ.get('PORT', 5000)))
-
