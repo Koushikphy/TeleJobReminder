@@ -86,6 +86,7 @@ class DataBase:
 
 
     def closeJob(self, jobID, status):
+        # set job status as complete or finished
         with self.con:
             with self.con.cursor() as cur:
                 cur.execute("SELECT count(*) from JOBINFO where jobID=%s",(jobID,))
@@ -96,6 +97,7 @@ class DataBase:
 
 
     def removeJob(self, userId, index):
+        # remove job details from database
         with self.con:
             with self.con.cursor() as cur:
                 cur.execute('Select jobID from JOBINFO where userId=%s',(userId,))
@@ -106,6 +108,7 @@ class DataBase:
 
 
     def listUser(self):
+        # list all users, admin only 
         with self.con:
             with self.con.cursor() as cur:
                 cur.execute('Select name,userid from USERIDS')
@@ -149,7 +152,7 @@ class DataBase:
 def fullName(user, idd=True):
     firstName = user.first_name
     lastName = user.last_name if user.last_name else ''
-    txt = f" {firstName} {lastName}"
+    txt = f"{firstName} {lastName}"
     if idd : txt+= f" ({user.id})"
     return txt
 
@@ -272,7 +275,7 @@ def clienReqManager():
     if userName:
         if(status=='S'):  # newly submitted job
             jobID = db.addJob(userId, host, job)
-            print(f'New job added for user {userName}({userId}) at {host} : {job}')
+            print(f'New job added for user {userName} ({userId}) at {host} : {job}')
             bot.send_message(userId, f'A new job <i>{job}</i> is submitted on <b>{host}</b>')
             return str(jobID), 200
 
@@ -280,8 +283,8 @@ def clienReqManager():
             jobID = data.get("jobID")  # if not starting, request must contain a job ID
             if db.closeJob(jobID, status):  # jobID is primary key so no other info is required
                 txt = 'is now complete.' if status=='C' else 'has failed.'
-                print(f'Job closed for user {userName}({userId}) at {host} : {job}, job={job}, jobID={jobID}')
-                bot.send_message(userId, f'Your job <i>{job}</i> on <b>{host}</b>  {txt}')
+                print(f'Job closed for user {userName} ({userId}) at {host} : {job}, job={job}, jobID={jobID}')
+                bot.send_message(userId, f'Your job <i>{job}</i> on <b>{host}</b> {txt}')
             else:
                 print(f'Close job requested for a unknown job [{userName}({userId}) at {host} : {job} {jobID}]')
             return str(jobID),200
