@@ -3,6 +3,7 @@ import os
 import sys
 import json
 import telebot
+from time import sleep
 from flask import Flask, request
 from psycopg2 import connect
 
@@ -171,12 +172,14 @@ def send_welcome(message):
         "Welcome to this automated bot. This bot keeps track of your computer jobs "
         "and sends you notification when your job is finished. "
         f"Your id is <b>{user.id}</b>. Use this when submitting jobs.")
+    sleep(0.5)
     bot.send_message(user.id,"Download and run the "
         "<a href='https://raw.githubusercontent.com/Koushikphy/TeleJobReminder/master/telebot'>telebot</a> "
         "script to get started.")
+    sleep(0.5)
     helpMessage(user)
-
     if not db.checkIfRegisteredUser(user):
+        sleep(1.0)
         bot.send_message(user.id,"Note: Cuurently you are not authorised to submit job with the bot. "
         "Please wait for the admin to accept your request.")
         bot.send_message(ADMIN, f'New unregistered user {fullName(user)}')
