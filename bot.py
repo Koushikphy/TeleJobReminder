@@ -226,8 +226,8 @@ def send_help(message):
 
 
 def helpMessage(user):
-    bot.send_message(user.id," Contact <a href='https://t.me/Koushikphy'> Koushik Naskar (Admin)</a> or "
-        "check out this <a href='https://github.com/Koushikphy/TeleJobReminder'> Github Repo</a> or for further queries.")
+    bot.send_message(user.id," Contact <a href='https://t.me/Koushikphy'>Koushik Naskar (Admin)</a> or "
+        "check out this <a href='https://github.com/Koushikphy/TeleJobReminder'>Github Repo</a> or for further queries.")
 
 
 @bot.message_handler(commands='myinfo')
