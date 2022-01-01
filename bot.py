@@ -27,6 +27,7 @@ class DataBase:
         self.con = connect(dbURL)
         with self.con:
             with self.con.cursor() as cur:
+                # create database tables and insert admin details
                 cur.execute( "CREATE TABLE IF NOT EXISTS JOBINFO("
                 "jobID SERIAL PRIMARY KEY,"
                 "userId INTEGER NOT NULL,"
@@ -35,9 +36,10 @@ class DataBase:
                 "job TEXT NOT NULL);"
                 "CREATE TABLE IF NOT EXISTS USERIDS ("
                 " userid INTEGER NOT NULL UNIQUE,"
-                " name TEXT NOT NULL);"
-                "INSERT into USERIDS (userid,name) values (%s,%s) "
-                "ON CONFLICT (userid) DO NOTHING",(ADMIN,ADMIN_NAME)
+                " name TEXT NOT NULL,"
+                " auth BOOLEAN DEFAULT FALSE);"                
+                "INSERT into USERIDS (userid,name,auth) values (%s,%s,%s) "
+                "ON CONFLICT (userid) DO NOTHING",(ADMIN,ADMIN_NAME,True)
                 )
 
 
@@ -111,40 +113,49 @@ class DataBase:
         # list all users, admin only 
         with self.con:
             with self.con.cursor() as cur:
-                cur.execute('Select name,userid from USERIDS')
+                cur.execute('Select name,userid,auth from USERIDS')
                 tt = cur.fetchall()
-                txt= "\n".join([f'{i}. {n} ({ii})' for i,(n,ii) in enumerate(tt, start=1)])
+                txt= "\n".join([f'{i}. {n} ({ii}), {a}' for i,(n,ii,a) in enumerate(tt, start=1)])
         return txt
 
 
     def checkIfRegisteredID(self, userID):
         with self.con:
             with self.con.cursor() as cur:
-                cur.execute('SELECT name from USERIDS where userId=%s',(userID,))
+                cur.execute('SELECT name from USERIDS where userId=%s and auth',(userID,))
                 name = cur.fetchone()
                 if name: return name[0]
 
 
+
     def checkIfRegisteredUser(self, user):
-        if self.checkIfRegisteredID(user.id):
-            return True
-        else:
-            print(f"Incoming request for unregistered user: {fullName(user)}")
-            bot.send_message(ADMIN, f'Incoming request for unregistered user {fullName(user)}')
-            return False
+        with self.con:
+            with self.con.cursor() as cur:
+                cur.execute('SELECT name from USERIDS where userId=%s and auth',(user.id,))
+                name = cur.fetchone()
+                if name:
+                    return True
+                else: # if not registered just note the user, do not authenticate
+                    cur.execute('INSERT into USERIDS (name,userid) values (%s,%s) ' 
+                    ' ON CONFLICT (userid) DO NOTHING',(fullName(user,idd=False),user.id))
+                    print(f"Incoming request for unregistered user: {fullName(user)}")
+                    bot.send_message(ADMIN, f'Incoming request from unregistered user {fullName(user)}')
+                    return False
 
 
-    def registerUser(self, name, userID):
+    def registerUser(self, userID):
         userID = int(userID)
         with self.con:
             with self.con.cursor() as cur:
-                cur.execute("SELECT count(*) from USERIDS where userid=%s",(userID,))
-                if cur.fetchone()[0]==1:
-                    bot.send_message(ADMIN, f'User ID {name} ({userID}) is already in database.')
-                    print(f'User ID {name} ({userID}) is already in database.')
+                cur.execute("SELECT name,auth from USERIDS where userId=%s",(userID,))
+                #^ this should return a record
+                name,auth = cur.fetchone()
+                if auth:
+                    bot.send_message(ADMIN, f'User ID {name} ({userID}) is already authenticated.')
+                    print(f'User ID {name} ({userID}) is already authenticated.')
                 else:
-                    cur.execute('INSERT into USERIDS (name,userid) values (%s,%s)',(name,userID))
-                    bot.send_message(ADMIN, f"User {name} ({userID}) added to database.")
+                    cur.execute("UPDATE USERIDS SET auth=%s where userid=%s",(True,userID))
+                    bot.send_message(ADMIN, f"User {name} ({userID}) is now authenticated.")
                     bot.send_message(userID, 'You are succesfully added to the bot to submit jobs.')
                 self.con.commit()
 
@@ -176,7 +187,7 @@ def send_welcome(message):
         "script to get started.")
     helpMessage(user)
     if not db.checkIfRegisteredUser(user):
-        bot.send_message(user.id,"Note: Cuurently you are not authorised to submit job with the bot. "
+        bot.send_message(user.id,"Note: Currently you are not authorised to submit job with the bot. "
         "Please wait for the admin to accept your request.")
         bot.send_message(ADMIN, f'New unregistered user {fullName(user)}')
 
@@ -207,7 +218,7 @@ def send_listAllJobs(message):
 
 
 @bot.message_handler(commands='help')
-def help(message):
+def send_help(message):
     # Send User Id of the user
     user = message.from_user
     print(f'Help request for {fullName(user)}')
@@ -215,8 +226,8 @@ def help(message):
 
 
 def helpMessage(user):
-    bot.send_message(user.id," Contact <a href='https://t.me/Koushikphy'> Koushik Naskar (Admin)</a> or "
-        "check out this <a href='https://github.com/Koushikphy/TeleJobReminder'> Github Repo</a> or for further queries.")
+    bot.send_message(user.id," Contact <a href='https://t.me/Koushikphy'>Koushik Naskar (Admin)</a> or "
+        "check out this <a href='https://github.com/Koushikphy/TeleJobReminder'>Github Repo</a> or for further queries.")
 
 
 @bot.message_handler(commands='myinfo')
@@ -229,7 +240,7 @@ def send_userinfo(message):
 
 
 @bot.message_handler(commands='remove')
-def start(message):
+def send_remove(message):
     # Remove jobs for the users from database
     user = message.from_user
     print(f'Requested to remove jobs for {fullName(user)}')
@@ -253,10 +264,10 @@ def removewithIDs(message):
 def adminOnly(message):
     # Only admin allowed functions
     if message.text.lower().startswith('register'):
-        # newUserID = message.text.split()[1]
-        name,userID = re.findall(r"Register (.*) (\d+)",message.text, re.IGNORECASE)[0]
-        print(f'New user registration requested for {name} {userID}')
-        db.registerUser(name,userID)
+        newUserID = message.text.split()[1]
+        # name,userID = re.findall(r"Register (.*) (\d+)",message.text, re.IGNORECASE)[0]
+        print(f'New user registration requested for {newUserID}')
+        db.registerUser(newUserID)
     elif message.text.lower().startswith('listuser'):
         bot.reply_to(message,db.listUser())
 
