@@ -37,7 +37,7 @@ class DataBase:
                 "CREATE TABLE IF NOT EXISTS USERIDS ("
                 " userid INTEGER NOT NULL UNIQUE,"
                 " name TEXT NOT NULL,"
-                " auth BOOLEAN DEFAULT FALSE);"                
+                " auth BOOLEAN DEFAULT FALSE);"
                 "INSERT into USERIDS (userid,name,auth) values (%s,%s,%s) "
                 "ON CONFLICT (userid) DO NOTHING",(ADMIN,ADMIN_NAME,True)
                 )
@@ -110,7 +110,7 @@ class DataBase:
 
 
     def listUser(self):
-        # list all users, admin only 
+        # list all users, admin only
         with self.con:
             with self.con.cursor() as cur:
                 cur.execute('Select name,userid,auth from USERIDS')
@@ -136,7 +136,7 @@ class DataBase:
                 if name:
                     return True
                 else: # if not registered just note the user, do not authenticate
-                    cur.execute('INSERT into USERIDS (name,userid) values (%s,%s) ' 
+                    cur.execute('INSERT into USERIDS (name,userid) values (%s,%s) '
                     ' ON CONFLICT (userid) DO NOTHING',(fullName(user,idd=False),user.id))
                     print(f"Incoming request for unregistered user: {fullName(user)}")
                     bot.send_message(ADMIN, f'Incoming request from unregistered user {fullName(user)}')
@@ -178,7 +178,7 @@ def send_welcome(message):
     # Send a welcome message and request registration to admin
     user = message.from_user
     print(f"User start: {fullName(user)}")
-    bot.send_message(user.id, f"Hi there {fullName(user,False)}. "
+    bot.send_message(user.id, f"Hi there <b>{fullName(user,False)}</b>. "
         "Welcome to this automated bot. This bot keeps track of your computer jobs "
         "and sends you notification when your job is finished. "
         f"Your id is <b>{user.id}</b>. Use this when submitting jobs.")
