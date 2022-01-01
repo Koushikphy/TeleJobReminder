@@ -37,7 +37,9 @@ class DataBase:
                 "CREATE TABLE IF NOT EXISTS USERIDS ("
                 " userid INTEGER NOT NULL UNIQUE,"
                 " name TEXT NOT NULL,"
-                " auth BOOLEAN DEFAULT FALSE);"
+                " auth BOOLEAN DEFAULT FALSE);"                
+                "INSERT into USERIDS (userid,name,auth) values (%s,%s,%s) "
+                "ON CONFLICT (userid) DO NOTHING",(ADMIN,ADMIN_NAME,True)
                 )
 
 
@@ -143,18 +145,15 @@ class DataBase:
 
     def registerUser(self, userID):
         userID = int(userID)
-        print(userID)
         with self.con:
             with self.con.cursor() as cur:
                 cur.execute("SELECT name,auth from USERIDS where userId=%s",(userID,))
                 #^ this should return a record
                 name,auth = cur.fetchone()
-                print(name,auth)
                 if auth:
                     bot.send_message(ADMIN, f'User ID {name} ({userID}) is already authenticated.')
                     print(f'User ID {name} ({userID}) is already authenticated.')
                 else:
-                    print('registering')
                     cur.execute("UPDATE USERIDS SET auth=%s where userid=%s",(True,userID))
                     bot.send_message(ADMIN, f"User {name} ({userID}) is now authenticated.")
                     bot.send_message(userID, 'You are succesfully added to the bot to submit jobs.')
