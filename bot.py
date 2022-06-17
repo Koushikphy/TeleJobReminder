@@ -109,6 +109,14 @@ class DataBase:
                 print(f'Job(s) removed for user {userId} jobIDs : {" ".join([str(i) for (i,) in jobIdsToRemove])}')
 
 
+
+    def clearJobs(self,userID):
+        with self.con:
+            with self.con.cursor() as cur:
+                cur.execute("Delete from JOBINFO where userId=%s and status in ('C','F') RETURNING *",(userID,))
+                deletedRows = cur.fetchall()
+                return len(deletedRows)
+
     def getJobDetail(self,userId, index): #WIP
         # JOB ID
         # job name
@@ -123,12 +131,7 @@ class DataBase:
         pass 
 
 
-    def clearJobs(self,userID):
-        with self.con:
-            with self.con.cursor() as cur:
-                cur.execute("Delete from JOBINFO where userId=%s and status in ('C','F') RETURNING *")
-                deletedRows = cur.fetchall()
-                return len(deletedRows)
+
 
 
     def listOtherJobs(self):
@@ -290,7 +293,7 @@ def send_remove(message):
 def send_clear(message):
     # Remove jobs for the users from database
     user = message.from_user
-    print(f'Requested to remove jobs for {fullName(user)}')
+    print(f'Requested to clear jobs for {fullName(user)}')
     if db.checkIfRegisteredUser(user):
         count = db.clearJobs(user.id)
         bot.send_message(user.id,f"Number of jobs removed: {count}")
