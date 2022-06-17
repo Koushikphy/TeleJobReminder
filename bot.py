@@ -109,6 +109,43 @@ class DataBase:
                 print(f'Job(s) removed for user {userId} jobIDs : {" ".join([str(i) for (i,) in jobIdsToRemove])}')
 
 
+
+    def clearJobs(self,userID):
+        with self.con:
+            with self.con.cursor() as cur:
+                cur.execute("Delete from JOBINFO where userId=%s and status in ('C','F') RETURNING *",(userID,))
+                deletedRows = cur.fetchall()
+                return len(deletedRows)
+
+    def getJobDetail(self,userId, index): #WIP
+        # JOB ID
+        # job name
+        # submitted on 
+        # status
+        # closed on 
+        # folder
+        with self.con:
+            with self.con.cursor() as cur:
+                cur.execute('Select * from JOBINFO where userId=%s',(userId,))
+                thisJob = cur.fetchall()[index-1]
+        pass 
+
+
+
+
+
+    def listOtherJobs(self):
+        # admin only service
+        with self.con:
+            with self.con.cursor() as cur:
+                cur.execute('Select name,userid from USERIDS')
+                tt = cur.fetchall()
+
+        jobsArr = [f"Jobs for {n}\n"+ self.listAllJobs(u)[0] for n,u in tt]
+        return jobsArr
+
+
+
     def listUser(self):
         # list all users, admin only
         with self.con:
@@ -252,6 +289,19 @@ def send_remove(message):
         bot.send_message(user.id,'You are not authorised to use this option.')
 
 
+@bot.message_handler(commands='clear')
+def send_clear(message):
+    # Remove jobs for the users from database
+    user = message.from_user
+    print(f'Requested to clear jobs for {fullName(user)}')
+    if db.checkIfRegisteredUser(user):
+        count = db.clearJobs(user.id)
+        bot.send_message(user.id,f"Number of jobs removed: {count}")
+    else:
+        bot.send_message(user.id,'You are not authorised to use this option.')
+
+
+
 def removewithIDs(message):
     # Remove jobs handlers
     toRemoveIds = [int(i) for i in re.split('[, ]+',message.text)]
@@ -269,7 +319,13 @@ def adminOnly(message):
         print(f'New user registration requested for {newUserID}')
         db.registerUser(newUserID)
     elif message.text.lower().startswith('listuser'):
-        bot.reply_to(message,db.listUser())
+        bot.send_message(ADMIN,db.listUser())
+    
+    elif message.text.lower().startswith('listall'):
+        for txt in  db.listOtherJobs():
+            bot.send_message(ADMIN,txt)
+
+        
 
 
 @server.route('/api/',methods=["POST"])
