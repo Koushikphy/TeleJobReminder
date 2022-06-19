@@ -123,21 +123,18 @@ class DataBase:
 
 
     def getJobDetail(self,userId, index): #WIP
-        print('getting job detail for ', userId, index)
         with self.con:
             with self.con.cursor() as cur:
                 cur.execute('Select jobID from JOBINFO where userId=%s',(userId,))
                 thisJob = cur.fetchall()[index-1][0]
-                print(thisJob, 'this job index')
                 cur.execute("SELECT job,host,directory,status,added,closed from JOBINFO where jobID=%s",(thisJob,))
                 info = cur.fetchone()
-                print(info)
                 return dedent(f'''Job: {info[0]} 
                     Host: {info[1]}
                     Directory: {info[2]}
                     Status: {info[3]}
-                    Added: {info[4]}
-                    Closed: {info[5]}
+                    Added: {info[4].strftime("%e %b %Y, %l:%M %p")}
+                    Closed: {info[5].strftime("%e %b %Y, %l:%M %p")}
                 ''')
 
 
