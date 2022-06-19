@@ -126,7 +126,7 @@ class DataBase:
         print('getting job detail for ', userId, index)
         with self.con:
             with self.con.cursor() as cur:
-                cur.execute('Select * from JOBINFO where userId=%s',(userId,))
+                cur.execute('Select jobID from JOBINFO where userId=%s',(userId,))
                 thisJob = cur.fetchall()[index-1]
                 print(thisJob, 'this job index')
                 cur.execute("SELECT (job,host,directory,status,added,closed) JOBINFO where jobID=%s",(thisJob,))
