@@ -267,6 +267,7 @@ def send_detail(message):
     print(f'Requested to get job for {fullName(user)}')
     if db.checkIfRegisteredUser(user):
         txt, count = db.listAllJobs(user.id)
+        print('count',count)
         sent = bot.send_message(user.id, 'Provide serial number of job to get the details.\n'+txt)
         if count : bot.register_next_step_handler(sent, detailwithIDs)
     else:
@@ -274,6 +275,7 @@ def send_detail(message):
 
 
 def detailwithIDs(message):
+    print('here')
     userId = message.from_user.id
     # try:
     jobId = int(message.text)
