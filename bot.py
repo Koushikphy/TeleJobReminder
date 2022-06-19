@@ -367,12 +367,13 @@ def clienReqManager():
     userId = int(data.get("id"))
     status = data.get("status")
     job    = data.get("job")
+    directory    = data.get("directory")
     host   = data.get("host")
     # job status used: C: Complete; F: Failed; R: Running
     userName = db.checkIfRegisteredID(userId)
     if userName:
         if(status=='S'):  # newly submitted job
-            jobID = db.addJob(userId, host, job)
+            jobID = db.addJob(userId, host, job,directory)
             print(f'New job added for user {userName} ({userId}) at {host} : {job}')
             bot.send_message(userId, f'A new job <i>{job}</i> is submitted on <b>{host}</b>')
             return str(jobID), 200
