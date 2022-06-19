@@ -85,8 +85,8 @@ class DataBase:
         with self.con:
             with self.con.cursor() as cur:
                 cur.execute(
-                'Insert into JOBINFO (userId, host, status, job, directory) values (%s,%s,%s,%s) RETURNING jobId',
-                (userId,host,'R',job,directory)
+                'Insert into JOBINFO (userId, host, status, job, directory) values (%s,%s,%s,%s,%s) RETURNING jobId',
+                (userId,host,'R',job, directory)
                 )# ^ only work with postgres
                 jobID, = cur.fetchone()
                 return jobID
