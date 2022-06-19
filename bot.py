@@ -1,6 +1,7 @@
 import re
 import os
 import sys
+import pytz
 import json
 import telebot
 from textwrap import dedent
@@ -19,6 +20,14 @@ server = Flask(__name__)
 
 bot= telebot.TeleBot(TOKEN, parse_mode='HTML')
 
+
+def formatDateTime(dTimeUTC):
+    # heroku postgres uses UTC datetime format
+    utcTimeZone = pytz.timezone('UTC')
+    kolkataTimeZone = pytz.timezone('Asia/Kolkata')
+    dateTimeKZ = utcTimeZone.localize(dTimeUTC).astimezone(kolkataTimeZone)
+
+    return dateTimeKZ.strftime().strftime("%e %b %Y, %l:%M %p")
 
 # Database to keep track of all jobs for all users-----
 
@@ -137,8 +146,8 @@ class DataBase:
                     <b>Host</b>: {info[1]}
                     <b>Directory</b>: {info[2]}
                     <b>Status</b>: {info[3]}
-                    <b>Added</b>: {info[4].strftime("%e %b %Y, %l:%M %p")}
-                    <b>Closed</b>: {info[5].strftime("%e %b %Y, %l:%M %p") if info[5] else '---'}
+                    <b>Added</b>: {formatDateTime(info[4])}
+                    <b>Closed</b>: {formatDateTime(info[5]) if info[5] else '---'}
                 ''')
 
 
@@ -223,6 +232,7 @@ db = DataBase()
 def send_welcome(message):
     # Send a welcome message and request registration to admin
     user = message.from_user
+    print(message)
     print(f"User start: {fullName(user)}")
     bot.send_message(user.id, f"Hi there <b>{fullName(user,False)}</b>. "
         "Welcome to this automated bot. This bot keeps track of your computer jobs "
@@ -377,7 +387,7 @@ def clienReqManager():
     userName = db.checkIfRegisteredID(userId)
     if userName:
         if(status=='S'):  # newly submitted job
-            jobID = db.addJob(userId, host, job,directory)
+            jobID = db.addJob(userId, host, job, directory)
             print(f'New job added for user {userName} ({userId}) at {host} : {job}')
             bot.send_message(userId, f'A new job <i>{job}</i> is submitted on <b>{host}</b>')
             return str(jobID), 200
