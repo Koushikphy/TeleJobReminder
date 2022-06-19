@@ -125,17 +125,20 @@ class DataBase:
     def getJobDetail(self,userId, index): #WIP
         with self.con:
             with self.con.cursor() as cur:
-                cur.execute('Select * from JOBINFO where userId=%s',(userId,))
-                thisJob = cur.fetchall()[index-1]
-                cur.execute("SELECT (job,host,directory,status,added,closed) JOBINFO where jobID=%s",(thisJob,))
+                cur.execute('Select jobID from JOBINFO where userId=%s',(userId,))
+                thisJob = cur.fetchall()[index-1][0]
+                cur.execute("SELECT job,host,directory,status,added,closed from JOBINFO where jobID=%s",(thisJob,))
                 info = cur.fetchone()
                 print(info)
-                return dedent(f'''Job: {info[0]} 
-                    Host: {info[1]}
-                    Directory: {info[2]}
-                    Status: {info[3]}
-                    Added: {info[4]}
-                    Closed: {info[5]}
+                return dedent(f'''
+                    Job Details for Job No: {index}
+                    ------------------------------------------------
+                    <b>Job</b>: {info[0]} 
+                    <b>Host</b>: {info[1]}
+                    <b>Directory</b>: {info[2]}
+                    <b>Status</b>: {info[3]}
+                    <b>Added</b>: {info[4].strftime("%e %b %Y, %l:%M %p")}
+                    <b>Closed</b>: {info[5].strftime("%e %b %Y, %l:%M %p") if info[5] else '---'}
                 ''')
 
 
@@ -267,6 +270,7 @@ def send_detail(message):
     print(f'Requested to get job for {fullName(user)}')
     if db.checkIfRegisteredUser(user):
         txt, count = db.listAllJobs(user.id)
+        print('count',count)
         sent = bot.send_message(user.id, 'Provide serial number of job to get the details.\n'+txt)
         if count : bot.register_next_step_handler(sent, detailwithIDs)
     else:
@@ -274,6 +278,7 @@ def send_detail(message):
 
 
 def detailwithIDs(message):
+    print('here')
     userId = message.from_user.id
     # try:
     jobId = int(message.text)
