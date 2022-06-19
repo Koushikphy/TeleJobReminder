@@ -34,9 +34,9 @@ class DataBase:
                 "userId INTEGER NOT NULL,"
                 "host TEXT NOT NULL,"
                 "status TEXT NOT NULL,"
-                "directory TEXT",
-                "added TIMESTAMP default CURRENT_TIMESTAMP",
-                "closed TIMESTAMP",
+                "directory TEXT,"
+                "added TIMESTAMP default CURRENT_TIMESTAMP,"
+                "closed TIMESTAMP,"
                 "job TEXT NOT NULL);"
                 "CREATE TABLE IF NOT EXISTS USERIDS ("
                 " userid INTEGER NOT NULL UNIQUE,"
