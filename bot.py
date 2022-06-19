@@ -129,15 +129,16 @@ class DataBase:
                 thisJob = cur.fetchall()[index-1][0]
                 cur.execute("SELECT job,host,directory,status,added,closed from JOBINFO where jobID=%s",(thisJob,))
                 info = cur.fetchone()
+                print(info)
                 return dedent(f'''
                     Job Details for Job No: {index}
-                    --------------------------------
+                    ------------------------------------------------
                     <b>Job</b>: {info[0]} 
                     <b>Host</b>: {info[1]}
                     <b>Directory</b>: {info[2]}
                     <b>Status</b>: {info[3]}
                     <b>Added</b>: {info[4].strftime("%e %b %Y, %l:%M %p")}
-                    <b>Closed</b>: {info[5].strftime("%e %b %Y, %l:%M %p")}
+                    <b>Closed</b>: {info[5].strftime("%e %b %Y, %l:%M %p") if info else '---'}
                 ''')
 
 
