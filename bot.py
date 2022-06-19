@@ -275,12 +275,12 @@ def send_detail(message):
 
 def detailwithIDs(message):
     userId = message.from_user.id
-    try:
-        jobId = int(message.text)
-        txt = db.getJobDetail(userId, jobId)
-        bot.send_message(userId, txt)
-    except:
-        bot.send_message(userId,"Failed to get teh job detail.")
+    # try:
+    jobId = int(message.text)
+    txt = db.getJobDetail(userId, jobId)
+    bot.send_message(userId, txt)
+    # except:
+        # bot.send_message(userId,"Failed to get the job detail.")
 
 
 
