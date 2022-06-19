@@ -174,27 +174,28 @@ class DataBase:
         return txt
 
 
-    def checkIfRegisteredID(self, userID):
-        with self.con:
-            with self.con.cursor() as cur:
-                cur.execute('SELECT name from USERIDS where userId=%s and auth',(userID,))
-                name = cur.fetchone()
-                if name: return name[0]
+    # def checkIfRegisteredID(self, userID):
+    #     with self.con:
+    #         with self.con.cursor() as cur:
+    #             cur.execute('SELECT name from USERIDS where userId=%s and auth',(userID,))
+    #             name = cur.fetchone()
+    #             if name: return name[0]
 
 
 
-    def checkIfRegisteredUser(self, user):
+    def checkIfRegisteredUser(self, user, start=False):
         with self.con:
             with self.con.cursor() as cur:
                 cur.execute('SELECT name from USERIDS where userId=%s and auth',(user.id,))
                 name = cur.fetchone()
                 if name:
-                    return True
+                    return name[0]
                 else: # if not registered just note the user, do not authenticate
                     cur.execute('INSERT into USERIDS (name,userid) values (%s,%s) '
                     ' ON CONFLICT (userid) DO NOTHING',(fullName(user,idd=False),user.id))
                     print(f"Incoming request for unregistered user: {fullName(user)}")
                     bot.send_message(ADMIN, f'Incoming request from unregistered user {fullName(user)}')
+                    if not start: bot.send_message(user.id,'You are not authorised to use this option.')
                     return False
 
 
@@ -232,7 +233,7 @@ db = DataBase()
 def send_welcome(message):
     # Send a welcome message and request registration to admin
     user = message.from_user
-    print(message)
+    # print(message)
     print(f"User start: {fullName(user)}")
     bot.send_message(user.id, f"Hi there <b>{fullName(user,False)}</b>. "
         "Welcome to this automated bot. This bot keeps track of your computer jobs "
@@ -242,10 +243,9 @@ def send_welcome(message):
         "<a href='https://raw.githubusercontent.com/Koushikphy/TeleJobReminder/master/telebot'>telebot</a> "
         "script to get started.")
     helpMessage(user)
-    if not db.checkIfRegisteredUser(user):
+    if not db.checkIfRegisteredUser(user,start=True):
         bot.send_message(user.id,"Note: Currently you are not authorised to submit job with the bot. "
         "Please wait for the admin to accept your request.")
-        bot.send_message(ADMIN, f'New unregistered user {fullName(user)}')
 
 
 @bot.message_handler(commands='listjobs')
@@ -256,8 +256,6 @@ def send_listRunningJobs(message):
     if db.checkIfRegisteredUser(user):
         jobs,_ = db.listRunningJobs(user.id)
         bot.send_message(user.id,jobs)
-    else:
-        bot.send_message(user.id,'You are not authorised to use this option.')
 
 
 @bot.message_handler(commands='listalljobs')
@@ -268,8 +266,6 @@ def send_listAllJobs(message):
     if db.checkIfRegisteredUser(user):
         jobs,_= db.listAllJobs(user.id)
         bot.send_message(user.id,jobs)
-    else:
-        bot.send_message(user.id,'You are not authorised to use this option.')
 
 
 
@@ -280,11 +276,8 @@ def send_detail(message):
     print(f'Requested to get job for {fullName(user)}')
     if db.checkIfRegisteredUser(user):
         txt, count = db.listAllJobs(user.id)
-        print('count',count)
-        sent = bot.send_message(user.id, 'Provide serial number of job to get the details.\n'+txt)
+        sent = bot.send_message(user.id, ('Provide serial number of jobs to remove.\n' if count else '')+txt)
         if count : bot.register_next_step_handler(sent, detailwithIDs)
-    else:
-        bot.send_message(user.id,'You are not authorised to use this option.')
 
 
 def detailwithIDs(message):
@@ -305,10 +298,8 @@ def send_remove(message):
     print(f'Requested to remove jobs for {fullName(user)}')
     if db.checkIfRegisteredUser(user):
         txt, count = db.listAllJobs(user.id)
-        sent = bot.send_message(user.id, 'Provide serial number of jobs to remove.\n'+txt)
+        sent = bot.send_message(user.id, ('Provide serial number of jobs to remove.\n' if count else '')+txt)
         if count : bot.register_next_step_handler(sent, removewithIDs)
-    else:
-        bot.send_message(user.id,'You are not authorised to use this option.')
 
 
 def removewithIDs(message):
@@ -326,8 +317,6 @@ def send_clear(message):
     if db.checkIfRegisteredUser(user):
         count = db.clearJobs(user.id)
         bot.send_message(user.id,f"Number of jobs removed: {count}")
-    else:
-        bot.send_message(user.id,'You are not authorised to use this option.')
 
 
 
@@ -384,7 +373,7 @@ def clienReqManager():
     directory    = data.get("directory")
     host   = data.get("host")
     # job status used: C: Complete; F: Failed; R: Running
-    userName = db.checkIfRegisteredID(userId)
+    userName = db.checkIfRegisteredUser(userId)
     if userName:
         if(status=='S'):  # newly submitted job
             jobID = db.addJob(userId, host, job, directory)
