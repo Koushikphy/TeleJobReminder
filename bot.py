@@ -233,7 +233,7 @@ db = DataBase()
 def send_welcome(message):
     # Send a welcome message and request registration to admin
     user = message.from_user
-    print(message)
+    # print(message)
     print(f"User start: {fullName(user)}")
     bot.send_message(user.id, f"Hi there <b>{fullName(user,False)}</b>. "
         "Welcome to this automated bot. This bot keeps track of your computer jobs "
@@ -276,8 +276,7 @@ def send_detail(message):
     print(f'Requested to get job for {fullName(user)}')
     if db.checkIfRegisteredUser(user):
         txt, count = db.listAllJobs(user.id)
-        print('count',count)
-        sent = bot.send_message(user.id, 'Provide serial number of job to get the details.\n'+txt)
+        sent = bot.send_message(user.id, ('Provide serial number of jobs to remove.\n' if count else '')+txt)
         if count : bot.register_next_step_handler(sent, detailwithIDs)
 
 
@@ -299,7 +298,7 @@ def send_remove(message):
     print(f'Requested to remove jobs for {fullName(user)}')
     if db.checkIfRegisteredUser(user):
         txt, count = db.listAllJobs(user.id)
-        sent = bot.send_message(user.id, 'Provide serial number of jobs to remove.\n'+txt)
+        sent = bot.send_message(user.id, ('Provide serial number of jobs to remove.\n' if count else '')+txt)
         if count : bot.register_next_step_handler(sent, removewithIDs)
 
 
