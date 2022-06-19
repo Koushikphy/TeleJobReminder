@@ -3,6 +3,7 @@ import os
 import sys
 import json
 import telebot
+from textwrap import dedent
 from flask import Flask, request
 from psycopg2 import connect
 
@@ -33,6 +34,9 @@ class DataBase:
                 "userId INTEGER NOT NULL,"
                 "host TEXT NOT NULL,"
                 "status TEXT NOT NULL,"
+                "directory TEXT",
+                "added TIMESTAMP default CURRENT_TIMESTAMP",
+                "closed TIMESTAMP",
                 "job TEXT NOT NULL);"
                 "CREATE TABLE IF NOT EXISTS USERIDS ("
                 " userid INTEGER NOT NULL UNIQUE,"
@@ -76,12 +80,13 @@ class DataBase:
         return "\n\n <pre>"+head+'\n'+'-'*30+'\n'+'\n'.join(['  '.join(i) for i in txt])+'</pre>'
 
 
-    def addJob(self, userId, host, job):
+    def addJob(self, userId, host, job, directory):
         # Adds new job to the database and returns the job ID
         with self.con:
             with self.con.cursor() as cur:
                 cur.execute(
-                'Insert into JOBINFO (userId, host, status, job) values (%s,%s,%s,%s) RETURNING jobId',(userId,host,'R',job)
+                'Insert into JOBINFO (userId, host, status, job, directory) values (%s,%s,%s,%s) RETURNING jobId',
+                (userId,host,'R',job,directory)
                 )# ^ only work with postgres
                 jobID, = cur.fetchone()
                 return jobID
@@ -94,7 +99,7 @@ class DataBase:
                 cur.execute("SELECT count(*) from JOBINFO where jobID=%s",(jobID,))
                 if cur.fetchone()[0]==0: # incoming close job request for a missing job
                     return False
-                cur.execute("UPDATE JOBINFO SET status=%s where jobID=%s",(status,jobID))
+                cur.execute("UPDATE JOBINFO SET status=%s, closed=CURRENT_TIMESTAMP where jobID=%s",(status,jobID))
                 return True
 
 
@@ -109,7 +114,6 @@ class DataBase:
                 print(f'Job(s) removed for user {userId} jobIDs : {" ".join([str(i) for (i,) in jobIdsToRemove])}')
 
 
-
     def clearJobs(self,userID):
         with self.con:
             with self.con.cursor() as cur:
@@ -117,20 +121,22 @@ class DataBase:
                 deletedRows = cur.fetchall()
                 return len(deletedRows)
 
+
     def getJobDetail(self,userId, index): #WIP
-        # JOB ID
-        # job name
-        # submitted on 
-        # status
-        # closed on 
-        # folder
         with self.con:
             with self.con.cursor() as cur:
                 cur.execute('Select * from JOBINFO where userId=%s',(userId,))
                 thisJob = cur.fetchall()[index-1]
-        pass 
-
-
+                cur.execute("SELECT (job,host,directory,status,added,closed) JOBINFO where jobID=%s",(thisJob,))
+                info = cur.fetchone()
+                print(info)
+                return dedent(f'''Job: {info[0]} 
+                    Host: {info[1]}
+                    Directory: {info[2]}
+                    Status: {info[3]}
+                    Added: {info[4]}
+                    Closed: {info[5]}
+                ''')
 
 
 
@@ -254,6 +260,65 @@ def send_listAllJobs(message):
 
 
 
+@bot.message_handler(commands='detail')
+def send_detail(message):
+    # Remove jobs for the users from database
+    user = message.from_user
+    print(f'Requested to get job for {fullName(user)}')
+    if db.checkIfRegisteredUser(user):
+        txt, count = db.listAllJobs(user.id)
+        sent = bot.send_message(user.id, 'Provide serial number of job to get the details.\n'+txt)
+        if count : bot.register_next_step_handler(sent, detailwithIDs)
+    else:
+        bot.send_message(user.id,'You are not authorised to use this option.')
+
+
+def detailwithIDs(message):
+    userId = message.from_user.id
+    try:
+        jobId = int(message.text)
+        txt = db.getJobDetail(userId, jobId)
+        bot.send_message(userId, txt)
+    except:
+        bot.send_message(userId,"Failed to get teh job detail.")
+
+
+
+@bot.message_handler(commands='remove')
+def send_remove(message):
+    # Remove jobs for the users from database
+    user = message.from_user
+    print(f'Requested to remove jobs for {fullName(user)}')
+    if db.checkIfRegisteredUser(user):
+        txt, count = db.listAllJobs(user.id)
+        sent = bot.send_message(user.id, 'Provide serial number of jobs to remove.\n'+txt)
+        if count : bot.register_next_step_handler(sent, removewithIDs)
+    else:
+        bot.send_message(user.id,'You are not authorised to use this option.')
+
+
+def removewithIDs(message):
+    # Remove jobs handlers
+    toRemoveIds = [int(i) for i in re.split('[, ]+',message.text)]
+    db.removeJob(message.from_user.id,toRemoveIds)
+    bot.send_message(message.from_user.id, f'These jobs are removed {",".join([str(i) for i in toRemoveIds])}')
+
+
+@bot.message_handler(commands='clear')
+def send_clear(message):
+    # Remove jobs for the users from database
+    user = message.from_user
+    print(f'Requested to clear jobs for {fullName(user)}')
+    if db.checkIfRegisteredUser(user):
+        count = db.clearJobs(user.id)
+        bot.send_message(user.id,f"Number of jobs removed: {count}")
+    else:
+        bot.send_message(user.id,'You are not authorised to use this option.')
+
+
+
+
+
 @bot.message_handler(commands='help')
 def send_help(message):
     # Send User Id of the user
@@ -274,39 +339,6 @@ def send_userinfo(message):
     print(f'Information requested for {fullName(user)}')
     bot.send_message(user.id, f"Hi there {fullName(user,False)}. "
         f"Your id is <b>{user.id}</b>. Use this when submitting jobs")
-
-
-@bot.message_handler(commands='remove')
-def send_remove(message):
-    # Remove jobs for the users from database
-    user = message.from_user
-    print(f'Requested to remove jobs for {fullName(user)}')
-    if db.checkIfRegisteredUser(user):
-        txt, count = db.listAllJobs(user.id)
-        sent = bot.send_message(user.id, 'Provide serial number of jobs to remove.\n'+txt)
-        if count : bot.register_next_step_handler(sent, removewithIDs)
-    else:
-        bot.send_message(user.id,'You are not authorised to use this option.')
-
-
-@bot.message_handler(commands='clear')
-def send_clear(message):
-    # Remove jobs for the users from database
-    user = message.from_user
-    print(f'Requested to clear jobs for {fullName(user)}')
-    if db.checkIfRegisteredUser(user):
-        count = db.clearJobs(user.id)
-        bot.send_message(user.id,f"Number of jobs removed: {count}")
-    else:
-        bot.send_message(user.id,'You are not authorised to use this option.')
-
-
-
-def removewithIDs(message):
-    # Remove jobs handlers
-    toRemoveIds = [int(i) for i in re.split('[, ]+',message.text)]
-    db.removeJob(message.from_user.id,toRemoveIds)
-    bot.send_message(message.from_user.id, f'These jobs are removed {",".join([str(i) for i in toRemoveIds])}')
 
 
 
