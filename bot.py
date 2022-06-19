@@ -138,7 +138,7 @@ class DataBase:
                     <b>Directory</b>: {info[2]}
                     <b>Status</b>: {info[3]}
                     <b>Added</b>: {info[4].strftime("%e %b %Y, %l:%M %p")}
-                    <b>Closed</b>: {info[5].strftime("%e %b %Y, %l:%M %p") if info else '---'}
+                    <b>Closed</b>: {info[5].strftime("%e %b %Y, %l:%M %p") if info[5] else '---'}
                 ''')
 
 
