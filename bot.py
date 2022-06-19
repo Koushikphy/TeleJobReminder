@@ -123,6 +123,7 @@ class DataBase:
 
 
     def getJobDetail(self,userId, index): #WIP
+        print('getting job detail for ', userId, index)
         with self.con:
             with self.con.cursor() as cur:
                 cur.execute('Select * from JOBINFO where userId=%s',(userId,))
