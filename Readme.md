@@ -19,7 +19,7 @@ Telegram bots are an extremely handy tool to send automated notifications/messag
 
 ### 🚀 Getting Started:
 - Open the Telegram bot at https://t.me/JobReminderBot and press `start` to get started. Wait for the admin to authorize you.
-- Download the `telebot` script (only written for bash atm), make it executable and keep it in your `PATH`.
+- Download the [telebot](https://github.com/Koushikphy/TeleJobReminder/blob/main/telebot) script (only written for bash atm), make it executable and keep it in your `PATH`.
 - Submit your job with the shell script as
     ```
     telebot -u USER_ID -n JOB_Name -j JOB_Command
@@ -27,7 +27,7 @@ Telegram bots are an extremely handy tool to send automated notifications/messag
 
 
 ### ⚒ Setting Optional Middlehost:
-If you are working in an isolated shell that can not communicate with the bot server (i.e., internet) directly, you can run the `middlehost.py`. It creates an HTTP route that transfers the network communications to and from the client-side to the bot server running on the cloud. In that case, you need to change the bot server address in the `telebot` script with the middle host server details.
+If you are working in an isolated shell that can not communicate with the bot server (i.e., internet) directly, you can run the [midhost.py](https://github.com/Koushikphy/TeleJobReminder/blob/main/midhost.py). It creates an HTTP route that transfers the network communications to and from the client-side to the bot server running on the cloud. In that case, you need to change the bot server address in the [telebot](https://github.com/Koushikphy/TeleJobReminder/blob/main/telebot) script with the middle host server details.
 
 ### 👍Useful Links:
 - [Telegram Bots: An introduction for developers.](https://core.telegram.org/bots)
