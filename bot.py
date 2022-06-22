@@ -25,6 +25,7 @@ def formatDateTime(dTimeUTC):
     # heroku postgres uses UTC datetime format
     utcTimeZone = pytz.timezone('UTC')
     kolkataTimeZone = pytz.timezone('Asia/Kolkata')
+    #^ Fixed to India date time zone, will give bad value if accessed outside of India
     dateTimeKZ = utcTimeZone.localize(dTimeUTC).astimezone(kolkataTimeZone)
 
     return dateTimeKZ.strftime("%e %b %Y, %l:%M %p")
@@ -138,7 +139,7 @@ class DataBase:
                 thisJob = cur.fetchall()[index-1][0]
                 cur.execute("SELECT job,host,directory,status,added,closed from JOBINFO where jobID=%s",(thisJob,))
                 info = cur.fetchone()
-                print(info)
+                # print(info)
                 return dedent(f'''
                     Job Details for Job No: {index}
                     ------------------------------------------------
@@ -174,16 +175,23 @@ class DataBase:
         return txt
 
 
-    # def checkIfRegisteredID(self, userID):
-    #     with self.con:
-    #         with self.con.cursor() as cur:
-    #             cur.execute('SELECT name from USERIDS where userId=%s and auth',(userID,))
-    #             name = cur.fetchone()
-    #             if name: return name[0]
+    def checkIfRegisteredID(self, userID):
+        # check if registered from the post to server
+        with self.con:
+            with self.con.cursor() as cur:
+                cur.execute('SELECT name from USERIDS where userId=%s and auth',(userID,))
+                name = cur.fetchone()
+                if name: 
+                    return name[0]
+                else:
+                    bot.send_message(ADMIN, f'Incoming request from unregistered user {userID}')
+                    bot.send_message(userID,'You are not authorised to use this option.')
+
 
 
 
     def checkIfRegisteredUser(self, user, start=False):
+        # check if registered from the telegram messages
         with self.con:
             with self.con.cursor() as cur:
                 cur.execute('SELECT name from USERIDS where userId=%s and auth',(user.id,))
@@ -200,6 +208,7 @@ class DataBase:
 
 
     def registerUser(self, userID):
+        # register a user, ADMIN only function
         userID = int(userID)
         with self.con:
             with self.con.cursor() as cur:
@@ -217,6 +226,7 @@ class DataBase:
 
 
 def fullName(user, idd=True):
+    # get full name with id from the user object
     firstName = user.first_name
     lastName = user.last_name if user.last_name else ''
     txt = f"{firstName} {lastName}"
@@ -273,10 +283,10 @@ def send_listAllJobs(message):
 def send_detail(message):
     # Remove jobs for the users from database
     user = message.from_user
-    print(f'Requested to get job for {fullName(user)}')
+    print(f'Requested to get job details for {fullName(user)}')
     if db.checkIfRegisteredUser(user):
         txt, count = db.listAllJobs(user.id)
-        sent = bot.send_message(user.id, ('Provide serial number of jobs to remove.\n' if count else '')+txt)
+        sent = bot.send_message(user.id, ('Provide serial number of jobs to get details.\n' if count else '')+txt)
         if count : bot.register_next_step_handler(sent, detailwithIDs)
 
 
@@ -367,13 +377,14 @@ def adminOnly(message):
 def clienReqManager():
     json_string = request.get_data().decode('utf-8')
     data = json.loads(json_string)
+    print(json_string)
     userId = int(data.get("id"))
     status = data.get("status")
     job    = data.get("job")
     directory    = data.get("directory")
     host   = data.get("host")
     # job status used: C: Complete; F: Failed; R: Running
-    userName = db.checkIfRegisteredUser(userId)
+    userName = db.checkIfRegisteredID(userId)
     if userName:
         if(status=='S'):  # newly submitted job
             jobID = db.addJob(userId, host, job, directory)
