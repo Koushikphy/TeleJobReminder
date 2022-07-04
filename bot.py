@@ -389,7 +389,7 @@ def clienReqManager():
         if(status=='S'):  # newly submitted job
             jobID = db.addJob(userId, host, job, directory)
             print(f'New job added for user {userName} ({userId}) at {host} : {job}')
-            bot.send_message(userId, f'A new job <i>{job}</i> is submitted on <b>{host}</b>')
+            bot.send_message(userId, f'A new job <b><i>{job}</i></b> is submitted on <b>{host}</b> from directory <i>{directory}</i>.')
             return str(jobID), 200
 
         elif status in ["C","F"]: # check if already closed
