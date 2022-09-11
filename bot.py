@@ -82,7 +82,7 @@ class DataBase:
 
     def formatter(self,data,header):
         # len(data[0])==len(header)
-        data = [[f'{l}. {d[0]}',*d[1:]] for l,d in enumerate(data, start=1)]
+        data = [[f'{l}. {d[0]} /u33',*d[1:]] for l,d in enumerate(data, start=1)]
         data = [[i[:10]+'...' if len(i)>13 else i for i in j ] for j in data]
         lens = [max([len(i)+1 for i in a]) for a in list(zip(*data))]
         txt = [[i.ljust(lens[k]) for k,i in enumerate(j)] for j in data]
