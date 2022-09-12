@@ -81,8 +81,7 @@ class DataBase:
 
 
     def formatter(self,data,header):
-        # len(data[0])==len(header)
-        data = [[f'{l}. {d[0]} /u33',*d[1:]] for l,d in enumerate(data, start=1)]
+        data = [[f'{l}. {d[0]}',*d[1:]] for l,d in enumerate(data, start=1)]
         data = [[i[:10]+'...' if len(i)>13 else i for i in j ] for j in data]
         lens = [max([len(i)+1 for i in a]) for a in list(zip(*data))]
         txt = [[i.ljust(lens[k]) for k,i in enumerate(j)] for j in data]
@@ -429,5 +428,11 @@ def webhook():
 
 
 if __name__ == "__main__":
+    bot.send_message(ADMIN,"Bot Started")
     from waitress import serve
     serve(server, host="0.0.0.0", port=int(os.environ.get('PORT', 5000)))
+
+
+/home/koushik/H3+/ORTHO_PARA_NEW/j_1_Trial/EKIN_0.1/JTOT_0/VCUT_3/15K
+
+pg_dump --host=ec2-52-201-106-191.compute-1.amazonaws.com --port=5432 --username=jlvrituwqsnjjo --password --dbname=jobinfo > output.sql
