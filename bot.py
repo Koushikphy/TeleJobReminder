@@ -431,8 +431,3 @@ if __name__ == "__main__":
     bot.send_message(ADMIN,"Bot Started")
     from waitress import serve
     serve(server, host="0.0.0.0", port=int(os.environ.get('PORT', 5000)))
-
-
-/home/koushik/H3+/ORTHO_PARA_NEW/j_1_Trial/EKIN_0.1/JTOT_0/VCUT_3/15K
-
-pg_dump --host=ec2-52-201-106-191.compute-1.amazonaws.com --port=5432 --username=jlvrituwqsnjjo --password --dbname=jobinfo > output.sql
