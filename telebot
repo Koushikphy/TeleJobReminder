@@ -60,6 +60,7 @@ out=$(curl -s -H "Content-Type:application/json" ${URL} -w "%{http_code}" --nopr
 {"id":"${USERID}",
 "host":"$(hostname)",
 "job":"${JOBNAME}",
+"directory":"$(pwd)",
 "status":"S"}
 EOF
 )")
@@ -94,10 +95,12 @@ fi
 
 out=$(curl -s -H "Content-Type:application/json" ${URL} -w "%{http_code}" --noproxy '*' -d "$(cat <<EOF
 {"id":"${USERID}",
-"host":"$(hostname -f)",
+"host":"$(hostname)",
 "job":"${JOBNAME}",
 "status":"${status}",
 "jobID":"${jobID}"}
 EOF
 )"
 )
+
+
