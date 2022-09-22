@@ -419,7 +419,7 @@ def getMessage():
 @server.route("/")
 def webhook():
     bot.remove_webhook()
-    bot.set_webhook(url='https://telejobreminder.herokuapp.com/' + TOKEN)
+    bot.set_webhook(url='https://web-production-5fd8.up.railway.app/' + TOKEN)
     return '''<div style="text-align: center;">
     <h1>Jobs Reminder</h1>
     <h3>A Telegram bot that notifies you about your computer jobs.</h3>
