@@ -59,8 +59,6 @@ class DataBase:
                 "ON CONFLICT (userid) DO NOTHING",(ADMIN,ADMIN_NAME,True)
                 )
 
-
-
     def listRunningJobs(self, userID):
         with self.con:
             with self.con.cursor() as cur:
@@ -227,6 +225,7 @@ def send_welcome(userID,name):
 
 @bot.message_handler(func=lambda x: True)
 def allCommnad(message):
+    print('here----------------')
     userID :int = message.from_user.id
     text :str = message.text.lower()
     name :str= f"{userID.first_name} {userID.last_name if userID.last_name else ''}"
