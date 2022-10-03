@@ -18,6 +18,9 @@ dbURL = os.getenv('DATABASE_URL')
 ADMIN_NAME = "Koushik Naskar"
 server = Flask(__name__)
 
+
+
+
 bot= telebot.TeleBot(TOKEN, parse_mode='HTML')
 
 
@@ -57,6 +60,7 @@ class DataBase:
                 )
 
 
+
     def listRunningJobs(self, userID):
         with self.con:
             with self.con.cursor() as cur:
@@ -66,19 +70,7 @@ class DataBase:
                 count = len(data)
         txt = "The follwing jobs are running:"+self.formatter(data,['Host','Job']) if count else \
                 "No running jobs found"
-        return txt,count
-
-
-    def listAllJobs(self, userID):
-        with self.con:
-            with self.con.cursor() as cur:
-                cur.execute('Select host,status,job from JOBINFO where userId=%s',(userID,))
-                data = cur.fetchall()
-                count = len(data)
-        txt = "List of Jobs:"+self.formatter(data,['Host','S','Job']) if count else\
-                "Job List empty"
-        return txt,count
-
+        return txt,
 
     def formatter(self,data,header):
         data = [[f'{l}. {d[0]}',*d[1:]] for l,d in enumerate(data, start=1)]
@@ -87,6 +79,24 @@ class DataBase:
         txt = [[i.ljust(lens[k]) for k,i in enumerate(j)] for j in data]
         head = '  '.join([ h.center(l) for h,l in zip(header,lens) ])
         return "\n\n <pre>"+head+'\n'+'-'*30+'\n'+'\n'.join(['  '.join(i) for i in txt])+'</pre>'
+
+
+    def listDetailedJobs(self, userID):
+        # will run the same function both for detail and removing
+        with self.con:
+            with self.con.cursor() as cur:
+                cur.execute('Select jobID,host,status,job from JOBINFO where userId=%s ORDER by jobID',(userID,))
+                data = cur.fetchall()
+                count = len(data)
+        if count ==0:
+            txt = "No jobs found"
+        else:
+            txt = "List of Jobs:\n"+"-"*50+'\n\n'+"\n\n".join(
+                f"{i}. <b>{job}</b> (<i>{host}</i>) [<b>{status}</b>] \n    /d_{jobID}        /r_{jobID}" 
+            for i,(jobID,host,status,job) in enumerate(data,start=1))
+            txt += "\n\n <i>* Use the <b>'d_*'</b> link to get details of a job and the <b>'r_*'</b> to remove the job.</i>" 
+        return txt
+
 
 
     def addJob(self, userId, host, job, directory):
@@ -112,35 +122,29 @@ class DataBase:
                 return True
 
 
-    def removeJob(self, userId, index):
+    def removeJob(self, userId, jobID):
         # remove job details from database
+
         with self.con:
             with self.con.cursor() as cur:
-                cur.execute('Select jobID from JOBINFO where userId=%s',(userId,))
-                jobIds = cur.fetchall() # check if those jobs are in database
-                jobIdsToRemove= [jobIds[i-1] for i in index]
-                cur.executemany("Delete from JOBINFO where jobID=%s ",jobIdsToRemove)
-                print(f'Job(s) removed for user {userId} jobIDs : {" ".join([str(i) for (i,) in jobIdsToRemove])}')
+
+                cur.execute("Delete from JOBINFO where jobID=%s and userID=%s RETURNING job",(jobID, userId))
+
+                jobName = cur.fetchone()[0]
+                return f"Job <b>{jobName}</b> removed from list."
 
 
-    def clearJobs(self,userID):
+
+    def getJobDetail(self,userId, jobID): #WIP
         with self.con:
             with self.con.cursor() as cur:
-                cur.execute("Delete from JOBINFO where userId=%s and status in ('C','F') RETURNING *",(userID,))
-                deletedRows = cur.fetchall()
-                return len(deletedRows)
-
-
-    def getJobDetail(self,userId, index): #WIP
-        with self.con:
-            with self.con.cursor() as cur:
-                cur.execute('Select jobID from JOBINFO where userId=%s',(userId,))
-                thisJob = cur.fetchall()[index-1][0]
-                cur.execute("SELECT job,host,directory,status,added,closed from JOBINFO where jobID=%s",(thisJob,))
+                # although we can get all the info from just the jobid, but also include the userid
+                cur.execute("SELECT job,host,directory,status,added,closed "
+                    "from JOBINFO where jobID=%s and userID=%s",(jobID,userId))
                 info = cur.fetchone()
                 # print(info)
                 return dedent(f'''
-                    Job Details for Job No: {index}
+                    Job Details:
                     ------------------------------------------------
                     <b>Job</b>: {info[0]} 
                     <b>Host</b>: {info[1]}
@@ -151,30 +155,22 @@ class DataBase:
                 ''')
 
 
-
-    def listOtherJobs(self):
-        # admin only service
-        with self.con:
-            with self.con.cursor() as cur:
-                cur.execute('Select name,userid from USERIDS')
-                tt = cur.fetchall()
-
-        jobsArr = [f"Jobs for {n}\n"+ self.listAllJobs(u)[0] for n,u in tt]
-        return jobsArr
-
-
-
-    def listUser(self):
+    def status(self):
         # list all users, admin only
         with self.con:
             with self.con.cursor() as cur:
                 cur.execute('Select name,userid,auth from USERIDS')
                 tt = cur.fetchall()
                 txt= "\n".join([f'{i}. {n} ({ii}), {a}' for i,(n,ii,a) in enumerate(tt, start=1)])
+                cur.execute("Select userId, count(*) from JOBINFO group by userId")
+                tt = cur.fetchall()
+                txt += "\n\n"
+                txt += "\n".join(f"{i}. {u} - {n}" for i,(u,n) in enumerate(tt,start=1))
         return txt
 
 
-    def checkIfRegisteredID(self, userID):
+
+    def checkIfRegistered(self, userID, name=None):
         # check if registered from the post to server
         with self.con:
             with self.con.cursor() as cur:
@@ -183,27 +179,12 @@ class DataBase:
                 if name: 
                     return name[0]
                 else:
-                    bot.send_message(ADMIN, f'Incoming request from unregistered user {userID}')
+                    cur.execute('INSERT into USERIDS (name,userid) values (%s,%s) '
+                    ' ON CONFLICT (userid) DO NOTHING',(name,userID))
+                    print(f"Incoming request for unregistered user: {name}({userID})")
+                    bot.send_message(ADMIN, f'Incoming request from unregistered user {userID}({userID})')
                     bot.send_message(userID,'You are not authorised to use this option.')
 
-
-
-
-    def checkIfRegisteredUser(self, user, start=False):
-        # check if registered from the telegram messages
-        with self.con:
-            with self.con.cursor() as cur:
-                cur.execute('SELECT name from USERIDS where userId=%s and auth',(user.id,))
-                name = cur.fetchone()
-                if name:
-                    return name[0]
-                else: # if not registered just note the user, do not authenticate
-                    cur.execute('INSERT into USERIDS (name,userid) values (%s,%s) '
-                    ' ON CONFLICT (userid) DO NOTHING',(fullName(user,idd=False),user.id))
-                    print(f"Incoming request for unregistered user: {fullName(user)}")
-                    bot.send_message(ADMIN, f'Incoming request from unregistered user {fullName(user)}')
-                    if not start: bot.send_message(user.id,'You are not authorised to use this option.')
-                    return False
 
 
     def registerUser(self, userID):
@@ -224,152 +205,70 @@ class DataBase:
                 self.con.commit()
 
 
-def fullName(user, idd=True):
-    # get full name with id from the user object
-    firstName = user.first_name
-    lastName = user.last_name if user.last_name else ''
-    txt = f"{firstName} {lastName}"
-    if idd : txt+= f" ({user.id})"
-    return txt
-
 
 db = DataBase()
 
 
 # Core Telegram bot message handlers-----------------------------------
 
-@bot.message_handler(commands='start')
-def send_welcome(message):
-    # Send a welcome message and request registration to admin
-    user = message.from_user
-    # print(message)
-    print(f"User start: {fullName(user)}")
-    bot.send_message(user.id, f"Hi there <b>{fullName(user,False)}</b>. "
+def send_welcome(userID,name):
+
+    bot.send_message(userID, f"Hi there <b>{name}</b>. "
         "Welcome to this automated bot. This bot keeps track of your computer jobs "
         "and sends you notification when your job is finished. "
-        f"Your id is <b>{user.id}</b>. Use this when submitting jobs.")
-    bot.send_message(user.id,"Download and run the "
+        f"Your id is <b>{userID}</b>. Use this when submitting jobs.")
+    bot.send_message(userID,"Download and run the "
         "<a href='https://raw.githubusercontent.com/Koushikphy/TeleJobReminder/master/telebot'>telebot</a> "
         "script to get started.")
-    helpMessage(user)
-    if not db.checkIfRegisteredUser(user,start=True):
-        bot.send_message(user.id,"Note: Currently you are not authorised to submit job with the bot. "
-        "Please wait for the admin to accept your request.")
-
-
-@bot.message_handler(commands='listjobs')
-def send_listRunningJobs(message):
-    # List Running jobs for the current user
-    user = message.from_user
-    print(f'List of running jobs requested for {fullName(user)}')
-    if db.checkIfRegisteredUser(user):
-        jobs,_ = db.listRunningJobs(user.id)
-        bot.send_message(user.id,jobs)
-
-
-@bot.message_handler(commands='listalljobs')
-def send_listAllJobs(message):
-    # List all jobs for the current user
-    user = message.from_user
-    print(f'List of all jobs requested for {fullName(user)}')
-    if db.checkIfRegisteredUser(user):
-        jobs,_= db.listAllJobs(user.id)
-        bot.send_message(user.id,jobs)
-
-
-
-@bot.message_handler(commands='detail')
-def send_detail(message):
-    # Remove jobs for the users from database
-    user = message.from_user
-    print(f'Requested to get job details for {fullName(user)}')
-    if db.checkIfRegisteredUser(user):
-        txt, count = db.listAllJobs(user.id)
-        sent = bot.send_message(user.id, ('Provide serial number of jobs to get details.\n' if count else '')+txt)
-        if count : bot.register_next_step_handler(sent, detailwithIDs)
-
-
-def detailwithIDs(message):
-    userId = message.from_user.id
-    # try:
-    jobId = int(message.text)
-    txt = db.getJobDetail(userId, jobId)
-    bot.send_message(userId, txt)
-    # except:
-    # bot.send_message(userId,"Failed to get the job detail.")
-
-
-
-@bot.message_handler(commands='remove')
-def send_remove(message):
-    # Remove jobs for the users from database
-    user = message.from_user
-    print(f'Requested to remove jobs for {fullName(user)}')
-    if db.checkIfRegisteredUser(user):
-        txt, count = db.listAllJobs(user.id)
-        sent = bot.send_message(user.id, ('Provide serial number of jobs to remove.\n' if count else '')+txt)
-        if count : bot.register_next_step_handler(sent, removewithIDs)
-
-
-def removewithIDs(message):
-    # Remove jobs handlers
-    toRemoveIds = [int(i) for i in re.split('[, ]+',message.text)]
-    db.removeJob(message.from_user.id,toRemoveIds)
-    bot.send_message(message.from_user.id, f'These jobs are removed {",".join([str(i) for i in toRemoveIds])}')
-
-
-@bot.message_handler(commands='clear')
-def send_clear(message):
-    # Remove jobs for the users from database
-    user = message.from_user
-    print(f'Requested to clear jobs for {fullName(user)}')
-    if db.checkIfRegisteredUser(user):
-        count = db.clearJobs(user.id)
-        bot.send_message(user.id,f"Number of jobs removed: {count}")
-
-
-
-
-
-@bot.message_handler(commands='help')
-def send_help(message):
-    # Send User Id of the user
-    user = message.from_user
-    print(f'Help request for {fullName(user)}')
-    helpMessage(user)
-
-
-def helpMessage(user):
-    bot.send_message(user.id," Contact <a href='https://t.me/Koushikphy'>Koushik Naskar (Admin)</a> or "
+    bot.send_message(userID," Contact <a href='https://t.me/Koushikphy'>Koushik Naskar (Admin)</a> or "
         "check out this <a href='https://github.com/Koushikphy/TeleJobReminder'>Github Repo</a> or for further queries.")
 
 
-@bot.message_handler(commands='myinfo')
-def send_userinfo(message):
-    # Send User Id of the user
-    user = message.from_user
-    print(f'Information requested for {fullName(user)}')
-    bot.send_message(user.id, f"Hi there {fullName(user,False)}. "
-        f"Your id is <b>{user.id}</b>. Use this when submitting jobs")
+
+@bot.message_handler(func=lambda x: True)
+def allCommnad(message):
+    user :int = message.from_user.id
+    text :str = message.text.lower()
+    name :str= f"{user.first_name} {user.last_name if user.last_name else ''}"
 
 
+    if text=='/start' or text=='/help':
+        send_welcome(user,name)
 
-@bot.message_handler(func=lambda message: message.from_user.id==int(ADMIN))
-def adminOnly(message):
-    # Only admin allowed functions
-    if message.text.lower().startswith('register'):
-        newUserID = message.text.split()[1]
-        # name,userID = re.findall(r"Register (.*) (\d+)",message.text, re.IGNORECASE)[0]
-        print(f'New user registration requested for {newUserID}')
-        db.registerUser(newUserID)
-    elif message.text.lower().startswith('listuser'):
-        bot.send_message(ADMIN,db.listUser())
+    if not db.checkIfRegistered(user,name):
+        bot.send_message(user,'You are not authorised to use this bot. Please wait for the admin to authenticate you.')
+        return
     
-    elif message.text.lower().startswith('listall'):
-        for txt in  db.listOtherJobs():
-            bot.send_message(ADMIN,txt)
 
+    elif text=="/list":
+        bot.send_message(user,db.listRunningJobs(user))
+
+    elif text=="/list_detail":
+        bot.send_message(user,db.listDetailedJobs(user))
+
+
+    elif text.startswith('/d'):
+        jobID = text.strip('/d_')
+        bot.reply_to(message, db.getJobDetail(user, jobID))
+
+    elif text.startswith('/r_'):
+        jobID = text.strip('/r_')
+        bot.reply_to(message,db.removeJob(user,jobID))
+    
+
+    elif text=="/status" and user ==int(ADMIN):
+        bot.send_message(user,db.status())
         
+    elif text.startswith("register") and user ==int(ADMIN):
+        newUser = int(text.strip("register"))
+        db.registerUser(newUser)
+        
+
+    else:
+        print("Unknown command")
+
+
+
 
 
 @server.route('/api/',methods=["POST"])
@@ -383,12 +282,13 @@ def clienReqManager():
     directory    = data.get("directory")
     host   = data.get("host")
     # job status used: C: Complete; F: Failed; R: Running
-    userName = db.checkIfRegisteredID(userId)
+    userName = db.checkIfRegistered(userId)
     if userName:
         if(status=='S'):  # newly submitted job
             jobID = db.addJob(userId, host, job, directory)
             print(f'New job added for user {userName} ({userId}) at {host} : {job}')
-            bot.send_message(userId, f'A new job <b><i>{job}</i></b> is submitted on <b>{host}</b> from directory <i>{directory}</i>.')
+            bot.send_message(userId, f'A new job <b><i>{job}</i></b> '
+                'is submitted on <b>{host}</b> from directory <i>{directory}</i>.')
             return str(jobID), 200
 
         elif status in ["C","F"]: # check if already closed
