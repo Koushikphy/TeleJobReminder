@@ -62,11 +62,11 @@ class DataBase:
     def listRunningJobs(self, userID):
         with self.con:
             with self.con.cursor() as cur:
-                cur.execute("Select host,job from JOBINFO where status='R' and userId=%s",(userID,))
+                cur.execute("Select host,job from JOBINFO where status='R' and userId=%s ORDER by jobID",(userID,))
                 # ^ only use single quote inside the postgres sql command
                 data = cur.fetchall()
                 count = len(data)
-        txt = "The follwing jobs are running:"+self.formatter(data,['Host','Job']) if count else \
+        txt = "Follwing jobs are running:"+self.formatter(data,['Host','Job']) if count else \
                 "No running jobs found"
         return txt,
 
@@ -76,7 +76,7 @@ class DataBase:
         lens = [max([len(i)+1 for i in a]) for a in list(zip(*data))]
         txt = [[i.ljust(lens[k]) for k,i in enumerate(j)] for j in data]
         head = '  '.join([ h.center(l) for h,l in zip(header,lens) ])
-        return "\n\n <pre>"+head+'\n'+'-'*30+'\n'+'\n'.join(['  '.join(i) for i in txt])+'</pre>'
+        return "\n <pre>"+head+'\n'+'-'*30+'\n'+'\n'.join(['  '.join(i) for i in txt])+'</pre>'
 
 
     def listDetailedJobs(self, userID):
@@ -90,7 +90,7 @@ class DataBase:
             txt = "No jobs found"
         else:
             txt = "List of Jobs:\n"+"-"*50+'\n\n'+"\n\n".join(
-                f"{i}. <b>{job}</b> (<i>{host}</i>) [<b>{status}</b>] \n    /d_{jobID}        /r_{jobID}" 
+                f"{i}. <b>{job}</b> (<i>{host}</i>) [<b>{status}</b>] \n     /d_{jobID}        /r_{jobID}" 
             for i,(jobID,host,status,job) in enumerate(data,start=1))
             txt += "\n\n <i>* Use the <b>'d_*'</b> link to get details of a job and the <b>'r_*'</b> to remove the job.</i>" 
         return txt
@@ -103,8 +103,7 @@ class DataBase:
             with self.con.cursor() as cur:
                 cur.execute(
                 'Insert into JOBINFO (userId, host, status, job, directory) values (%s,%s,%s,%s,%s) RETURNING jobId',
-                (userId,host,'R',job, directory)
-                )# ^ only work with postgres
+                (userId,host,'R',job, directory))
                 jobID, = cur.fetchone()
                 return jobID
 
@@ -122,12 +121,9 @@ class DataBase:
 
     def removeJob(self, userId, jobID):
         # remove job details from database
-
         with self.con:
             with self.con.cursor() as cur:
-
                 cur.execute("Delete from JOBINFO where jobID=%s and userID=%s RETURNING job",(jobID, userId))
-
                 jobName = cur.fetchone()[0]
                 return f"Job <b>{jobName}</b> removed from list."
 
@@ -140,7 +136,6 @@ class DataBase:
                 cur.execute("SELECT job,host,directory,status,added,closed "
                     "from JOBINFO where jobID=%s and userID=%s",(jobID,userId))
                 info = cur.fetchone()
-                # print(info)
                 return dedent(f'''
                     Job Details:
                     ------------------------------------------------
