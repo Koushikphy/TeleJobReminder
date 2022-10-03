@@ -225,10 +225,9 @@ def send_welcome(userID,name):
 
 @bot.message_handler(func=lambda x: True)
 def allCommnad(message):
-    print('here----------------')
     userID :int = message.from_user.id
     text :str = message.text.lower()
-    name :str= f"{userID.first_name} {userID.last_name if userID.last_name else ''}"
+    name :str= f"{message.from_user.first_name} {message.from_user.last_name if message.from_user.last_name else ''}"
 
     print(f"Command {text} from user {userID}")
 
@@ -276,7 +275,7 @@ def allCommnad(message):
 def clienReqManager():
     json_string = request.get_data().decode('utf-8')
     data = json.loads(json_string)
-    print(json_string)
+    # print(json_string)
     userId = int(data.get("id"))
     status = data.get("status")
     job    = data.get("job")
@@ -288,8 +287,8 @@ def clienReqManager():
         if(status=='S'):  # newly submitted job
             jobID = db.addJob(userId, host, job, directory)
             print(f'New job added for user {userName} ({userId}) at {host} : {job}')
-            bot.send_message(userId, f'A new job <b><i>{job}</i></b> '
-                'is submitted on <b>{host}</b> from directory <i>{directory}</i>.')
+            bot.send_message(userId, 
+            f'A new job <b><i>{job}</i></b> is submitted on <b>{host}</b> from directory <i>{directory}</i>.')
             return str(jobID), 200
 
         elif status in ["C","F"]: # check if already closed
