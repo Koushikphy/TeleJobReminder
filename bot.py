@@ -227,39 +227,41 @@ def send_welcome(userID,name):
 
 @bot.message_handler(func=lambda x: True)
 def allCommnad(message):
-    user :int = message.from_user.id
+    userID :int = message.from_user.id
     text :str = message.text.lower()
-    name :str= f"{user.first_name} {user.last_name if user.last_name else ''}"
+    name :str= f"{userID.first_name} {userID.last_name if userID.last_name else ''}"
 
+    print(f"Command {text} from user {userID}")
 
     if text=='/start' or text=='/help':
-        send_welcome(user,name)
+        send_welcome(userID,name)
 
-    if not db.checkIfRegistered(user,name):
-        bot.send_message(user,'You are not authorised to use this bot. Please wait for the admin to authenticate you.')
+    if not db.checkIfRegistered(userID,name):
+        bot.send_message(userID,'You are not authorised to use this bot.'
+            ' Please wait for the admin to authenticate you.')
         return
     
 
     elif text=="/list":
-        bot.send_message(user,db.listRunningJobs(user))
+        bot.send_message(userID,db.listRunningJobs(userID))
 
     elif text=="/list_detail":
-        bot.send_message(user,db.listDetailedJobs(user))
+        bot.send_message(userID,db.listDetailedJobs(userID))
 
 
     elif text.startswith('/d'):
         jobID = text.strip('/d_')
-        bot.reply_to(message, db.getJobDetail(user, jobID))
+        bot.reply_to(message, db.getJobDetail(userID, jobID))
 
     elif text.startswith('/r_'):
         jobID = text.strip('/r_')
-        bot.reply_to(message,db.removeJob(user,jobID))
+        bot.reply_to(message,db.removeJob(userID,jobID))
     
 
-    elif text=="/status" and user ==int(ADMIN):
-        bot.send_message(user,db.status())
+    elif text=="/status" and userID ==int(ADMIN):
+        bot.send_message(userID,db.status())
         
-    elif text.startswith("register") and user ==int(ADMIN):
+    elif text.startswith("register") and userID ==int(ADMIN):
         newUser = int(text.strip("register"))
         db.registerUser(newUser)
         
