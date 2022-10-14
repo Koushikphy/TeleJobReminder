@@ -165,19 +165,21 @@ class DataBase:
 
     def checkIfRegistered(self, userID, name=None):
         # check if registered from the post to server
-        with self.con:
-            with self.con.cursor() as cur:
-                cur.execute('SELECT name from USERIDS where userId=%s and auth',(userID,))
-                name = cur.fetchone()
-                if name: 
-                    return name[0]
-                else:
-                    cur.execute('INSERT into USERIDS (name,userid) values (%s,%s) '
-                    ' ON CONFLICT (userid) DO NOTHING',(name,userID))
-                    print(f"Incoming request for unregistered user: {name}({userID})")
-                    bot.send_message(ADMIN, f'Incoming request from unregistered user {userID}({userID})')
-                    bot.send_message(userID,'You are not authorised to use this option.')
-
+        try:
+            with self.con:
+                with self.con.cursor() as cur:
+                    cur.execute('SELECT name from USERIDS where userId=%s and auth',(userID,))
+                    name = cur.fetchone()
+                    if name: 
+                        return name[0]
+                    else:
+                        cur.execute('INSERT into USERIDS (name,userid) values (%s,%s) '
+                        ' ON CONFLICT (userid) DO NOTHING',(name,userID))
+                        print(f"Incoming request for unregistered user: {name}({userID})")
+                        bot.send_message(ADMIN, f'Incoming request from unregistered user {userID}({userID})')
+                        bot.send_message(userID,'You are not authorised to use this option.')
+        except Exception as e:
+            print(e)
 
 
     def registerUser(self, userID):
@@ -229,6 +231,8 @@ def allCommnad(message):
     if text=='/start' or text=='/help':
         send_welcome(userID,name)
 
+
+    
     if not db.checkIfRegistered(userID,name):
         bot.send_message(userID,'You are not authorised to use this bot.'
             ' Please wait for the admin to authenticate you.')
