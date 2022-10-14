@@ -166,6 +166,7 @@ class DataBase:
     def checkIfRegistered(self, userID, name=None):
         # check if registered from the post to server
         try:
+            print(f"Request from {userID} {name}")
             with self.con:
                 with self.con.cursor() as cur:
                     cur.execute('SELECT name from USERIDS where userId=%s and auth',(userID,))
@@ -173,6 +174,7 @@ class DataBase:
                     if name: 
                         return name[0]
                     else:
+                        print('User not found ')
                         cur.execute('INSERT into USERIDS (name,userid) values (%s,%s) '
                         ' ON CONFLICT (userid) DO NOTHING',(name,userID))
                         print(f"Incoming request for unregistered user: {name}({userID})")
