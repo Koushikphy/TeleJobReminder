@@ -226,7 +226,7 @@ def allCommnad(message):
     text :str = message.text.lower()
     name :str= f"{message.from_user.first_name} {message.from_user.last_name if message.from_user.last_name else ''}"
 
-    print(f"Command {text} from user {userID}")
+    print(f"Command {text} from user {userID}, {name}")
 
     if text=='/start' or text=='/help':
         send_welcome(userID,name)
