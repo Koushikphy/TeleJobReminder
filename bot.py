@@ -193,7 +193,7 @@ class DataBase:
                     cur.execute("SELECT name,auth from USERIDS where userId=%s",(userID,))
                     #^ this should return a record
                     val = cur.fetchone()
-                    print(val)
+                    print(val, userID)
                     name,auth = val
                     if auth:
                         bot.send_message(ADMIN, f'User ID {name} ({userID}) is already authenticated.')
