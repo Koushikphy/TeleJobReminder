@@ -174,19 +174,19 @@ class DataBase:
                     if nameThis: 
                         return nameThis[0]
                     else:
-                        print('User not found ')
+                        # print('User not found ')
                         cur.execute('INSERT into USERIDS (name,userid) values (%s,%s) '
                         ' ON CONFLICT (userid) DO NOTHING',(name,userID))
                         print(f"Incoming request for unregistered user: {name}({userID})")
-                        bot.send_message(ADMIN, f'Incoming request from unregistered user {userID}({userID})')
-                        bot.send_message(userID,'You are not authorised to use this option.')
+                        bot.send_message(ADMIN, f'Incoming request from unregistered user {name}({userID})')
+                        # bot.send_message(userID,'You are not authorised to use this option.')
         except Exception as e:
             bot.send_message(ADMIN, str(e))
 
 
     def registerUser(self, userID):
         # register a user, ADMIN only function
-        userID = int(userID)
+        # userID = int(userID)
         with self.con:
             with self.con.cursor() as cur:
                 cur.execute("SELECT name,auth from USERIDS where userId=%s",(userID,))
@@ -228,7 +228,7 @@ def allCommnad(message):
     text :str = message.text.lower()
     name :str= f"{message.from_user.first_name} {message.from_user.last_name if message.from_user.last_name else ''}"
 
-    print(f"Command {text} from user {userID}, {name}")
+    print(f"Command '{text}' from user {userID}, {name}")
 
     if text=='/start' or text=='/help':
         send_welcome(userID,name)
@@ -257,16 +257,17 @@ def allCommnad(message):
         bot.reply_to(message,db.removeJob(userID,jobID))
     
 
-    elif text=="/status" and userID ==int(ADMIN):
+    elif text=="/status" and userID ==ADMIN:
         bot.send_message(userID,db.status())
         
-    elif text.startswith("register") and userID ==int(ADMIN):
-        newUser = int(text.strip("register"))
+    elif text.startswith("register") and userID ==ADMIN:
+        # newUser = int(text.strip("register"))
+        newUser = text.strip("register")
         db.registerUser(newUser)
         
 
     else:
-        print("Unknown command")
+        print(f"Unknown command, {text.startswith('register')}  {userID ==ADMIN}")
 
 
 
@@ -277,7 +278,8 @@ def clienReqManager():
     json_string = request.get_data().decode('utf-8')
     data = json.loads(json_string)
     # print(json_string)
-    userId = int(data.get("id"))
+    # userId = int(data.get("id"))
+    userId = data.get("id")
     status = data.get("status")
     job    = data.get("job")
     directory    = data.get("directory")
