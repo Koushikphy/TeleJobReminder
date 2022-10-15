@@ -170,9 +170,9 @@ class DataBase:
             with self.con:
                 with self.con.cursor() as cur:
                     cur.execute('SELECT name from USERIDS where userId=%s and auth',(userID,))
-                    name = cur.fetchone()
-                    if name: 
-                        return name[0]
+                    nameThis = cur.fetchone()
+                    if nameThis: 
+                        return nameThis[0]
                     else:
                         print('User not found ')
                         cur.execute('INSERT into USERIDS (name,userid) values (%s,%s) '
