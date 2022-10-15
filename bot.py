@@ -6,7 +6,7 @@ import telebot
 from textwrap import dedent
 from flask import Flask, request
 from psycopg2 import connect
-import pytz
+import pytz, traceback
 
 
 
@@ -187,19 +187,23 @@ class DataBase:
     def registerUser(self, userID):
         # register a user, ADMIN only function
         # userID = int(userID)
-        with self.con:
-            with self.con.cursor() as cur:
-                cur.execute("SELECT name,auth from USERIDS where userId=%s",(userID,))
-                #^ this should return a record
-                name,auth = cur.fetchone()
-                if auth:
-                    bot.send_message(ADMIN, f'User ID {name} ({userID}) is already authenticated.')
-                    print(f'User ID {name} ({userID}) is already authenticated.')
-                else:
-                    cur.execute("UPDATE USERIDS SET auth=%s where userid=%s",(True,userID))
-                    bot.send_message(ADMIN, f"User {name} ({userID}) is now authenticated.")
-                    bot.send_message(userID, 'You are succesfully added to the bot to submit jobs.')
-                self.con.commit()
+        try:
+            with self.con:
+                with self.con.cursor() as cur:
+                    cur.execute("SELECT name,auth from USERIDS where userId=%s",(userID,))
+                    #^ this should return a record
+                    name,auth = cur.fetchone()
+                    if auth:
+                        bot.send_message(ADMIN, f'User ID {name} ({userID}) is already authenticated.')
+                        print(f'User ID {name} ({userID}) is already authenticated.')
+                    else:
+                        cur.execute("UPDATE USERIDS SET auth=%s where userid=%s",(True,userID))
+                        bot.send_message(ADMIN, f"User {name} ({userID}) is now authenticated.")
+                        bot.send_message(userID, 'You are succesfully added to the bot to submit jobs.')
+                    self.con.commit()
+        except Exception as e:
+            bot.send_message(ADMIN, str(e))
+            print(traceback.format_exc())
 
 
 
