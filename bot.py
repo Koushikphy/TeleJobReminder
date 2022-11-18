@@ -5,7 +5,7 @@ import json
 import telebot
 from textwrap import dedent
 from flask import Flask, request
-from psycopg2 import connect
+from psycopg2 import connect, InterfaceError
 import pytz, traceback
 
 
@@ -15,6 +15,7 @@ import pytz, traceback
 TOKEN = os.getenv("TEL_API")
 ADMIN = os.getenv('TEL_ADMIN')
 dbURL = os.getenv('DATABASE_URL')
+webHookURL = os.getenv('WEBHOOK_URL')
 ADMIN_NAME = "Koushik Naskar"
 server = Flask(__name__)
 
@@ -59,28 +60,44 @@ class DataBase:
                 "ON CONFLICT (userid) DO NOTHING",(ADMIN,ADMIN_NAME,True)
                 )
 
+
+    def connectToDb(self):
+        # flyio postgresql disconnects after 30 minutes of inactivity
+        if self.con.closed !=0:
+            self.con = connect(self.dbFile)
+        else:
+            try:
+                with self.con:
+                    with self.con.cursor() as cur:
+                        cur.execute("SELECT count(*) from USERIDS;")  # just a dummy call
+            except InterfaceError:
+                # con.closed is 0 but still unable to connect to database
+                self.con = connect(self.dbFile)
+
+
+
+
+
     def listRunningJobs(self, userID):
+        # will run the same function both for detail and removing
+        self.connectToDb()
         with self.con:
             with self.con.cursor() as cur:
-                cur.execute("Select host,job from JOBINFO where status='R' and userId=%s ORDER by jobID",(userID,))
-                # ^ only use single quote inside the postgres sql command
+                cur.execute("Select jobID,host,job from JOBINFO where status='R' and userId=%s ORDER by jobID",(userID,))
                 data = cur.fetchall()
                 count = len(data)
-        txt = "Follwing jobs are running:"+self.formatter(data,['Host','Job']) if count else \
-                "No running jobs found"
-        return txt,
-
-    def formatter(self,data,header):
-        data = [[f'{l}. {d[0]}',*d[1:]] for l,d in enumerate(data, start=1)]
-        data = [[i[:10]+'...' if len(i)>13 else i for i in j ] for j in data]
-        lens = [max([len(i)+1 for i in a]) for a in list(zip(*data))]
-        txt = [[i.ljust(lens[k]) for k,i in enumerate(j)] for j in data]
-        head = '  '.join([ h.center(l) for h,l in zip(header,lens) ])
-        return "\n <pre>"+head+'\n'+'-'*30+'\n'+'\n'.join(['  '.join(i) for i in txt])+'</pre>'
+        if count ==0:
+            txt = "No running jobs found"
+        else:
+            txt = "Follwing jobs are running:\n"+"-"*50+'\n\n'+"\n\n".join(
+                f"{i}. <b>{job}</b> (<i>{host}</i>)   /d_{jobID}" 
+            for i,(jobID,host,job) in enumerate(data,start=1))
+        return txt
 
 
     def listDetailedJobs(self, userID):
         # will run the same function both for detail and removing
+        self.connectToDb()
         with self.con:
             with self.con.cursor() as cur:
                 cur.execute('Select jobID,host,status,job from JOBINFO where userId=%s ORDER by jobID',(userID,))
@@ -99,6 +116,7 @@ class DataBase:
 
     def addJob(self, userId, host, job, directory):
         # Adds new job to the database and returns the job ID
+        self.connectToDb()
         with self.con:
             with self.con.cursor() as cur:
                 cur.execute(
@@ -110,6 +128,7 @@ class DataBase:
 
     def closeJob(self, jobID, status):
         # set job status as complete or finished
+        self.connectToDb()
         with self.con:
             with self.con.cursor() as cur:
                 cur.execute("SELECT count(*) from JOBINFO where jobID=%s",(jobID,))
@@ -121,6 +140,7 @@ class DataBase:
 
     def removeJob(self, userId, jobID):
         # remove job details from database
+        self.connectToDb()
         with self.con:
             with self.con.cursor() as cur:
                 cur.execute("Delete from JOBINFO where jobID=%s and userID=%s RETURNING job",(jobID, userId))
@@ -130,6 +150,7 @@ class DataBase:
 
 
     def getJobDetail(self,userId, jobID): #WIP
+        self.connectToDb()
         with self.con:
             with self.con.cursor() as cur:
                 # although we can get all the info from just the jobid, but also include the userid
@@ -150,6 +171,7 @@ class DataBase:
 
     def status(self):
         # list all users, admin only
+        self.connectToDb()
         with self.con:
             with self.con.cursor() as cur:
                 cur.execute('Select name,userid,auth from USERIDS')
@@ -166,6 +188,7 @@ class DataBase:
     def checkIfRegistered(self, userID, name=None):
         # check if registered from the post to server
         try:
+            self.connectToDb()
             print(f"Request from {userID} {name}")
             with self.con:
                 with self.con.cursor() as cur:
@@ -186,11 +209,12 @@ class DataBase:
 
     def registerUser(self, userID):
         # register a user, ADMIN only function
-
+        
         try:
+            self.connectToDb()
             with self.con:
                 with self.con.cursor() as cur:
-                    cur.execute("SELECT name,auth from USERIDS where userId=%s",(userID,))
+                    cur.execute('SELECT name,auth from USERIDS where userId=%s',(userID,))
                     #^ this should return a record
                     val = cur.fetchone()
                     print(val, userID, type(userID))
@@ -202,7 +226,7 @@ class DataBase:
                         cur.execute("UPDATE USERIDS SET auth=%s where userid=%s",(True,userID))
                         bot.send_message(ADMIN, f"User {name} ({userID}) is now authenticated.")
                         bot.send_message(userID, 'You are succesfully added to the bot to submit jobs.')
-                    self.con.commit()
+
         except Exception as e:
             bot.send_message(ADMIN, str(e))
             print(traceback.format_exc())
@@ -250,7 +274,7 @@ def allCommnad(message):
     elif text=="/list":
         bot.send_message(userID,db.listRunningJobs(userID))
 
-    elif text=="/list_detail":
+    elif text=="/list_full":
         bot.send_message(userID,db.listDetailedJobs(userID))
 
 
@@ -268,7 +292,7 @@ def allCommnad(message):
         
     elif text.startswith("register") and userID ==ADMIN:
         # newUser = int(text.strip("register"))
-        newUser = text.strip("register")
+        newUser = text.strip("register ")
         db.registerUser(newUser)
         
 
