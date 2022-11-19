@@ -277,6 +277,10 @@ def allCommnad(message):
     elif text=="/list_full":
         bot.send_message(userID,db.listDetailedJobs(userID))
 
+    elif text.startswith('/r_'):
+        jobID = text.strip('/r_')
+        bot.reply_to(message,db.removeJob(userID,jobID))
+    
 
     elif text.startswith('/d'):
         jobID = text.strip('/d_')
@@ -365,6 +369,7 @@ def webhook():
 
 
 if __name__ == "__main__":
+    bot.send_message(ADMIN,"Bot Started")
     from waitress import serve
     bot.send_message(ADMIN,"Bot Started")
     serve(server, host="0.0.0.0", port=int(os.environ.get('PORT', 5000)))
