@@ -360,7 +360,7 @@ def getMessage():
 @server.route("/")
 def webhook():
     bot.remove_webhook()
-    bot.set_webhook(url='https://telejobreminder.fly.dev/' + TOKEN)
+    bot.set_webhook(url=webHookURL + TOKEN)
     return '''<div style="text-align: center;">
     <h1>Jobs Reminder</h1>
     <h3>A Telegram bot that notifies you about your computer jobs.</h3>
@@ -371,5 +371,4 @@ def webhook():
 if __name__ == "__main__":
     bot.send_message(ADMIN,"Bot Started")
     from waitress import serve
-    bot.send_message(ADMIN,"Bot Started")
     serve(server, host="0.0.0.0", port=int(os.environ.get('PORT', 5000)))

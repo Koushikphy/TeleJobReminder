@@ -5,7 +5,7 @@ import requests
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
 # Central bot server url
-BOT_SERVER = "https://telejobreminder.herokuapp.com/api/"
+BOT_SERVER = 'https://telejobreminder.fly.dev/api/'
 
 
 class MyServer(BaseHTTPRequestHandler):

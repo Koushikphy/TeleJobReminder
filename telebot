@@ -4,7 +4,7 @@
 #TODO: Accept command and job name with multiple names without a quote
 
 # URL of the bot server
-URL="https://telejobreminder.herokuapp.com/api/"
+URL='https://telejobreminder.fly.dev/api/'
 usage="
 Run this script as:
 
