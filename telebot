@@ -1,7 +1,4 @@
 #!/bin/bash
-# submit job as jobname userid job, using shell script, as I don't want to run the job from another python, just.
-
-#TODO: Accept command and job name with multiple names without a quote
 
 # URL of the bot server
 URL='https://telejobreminder.fly.dev/api/'
@@ -56,7 +53,8 @@ fi
 
 
 # register the job to the bot server database, it should return a status code and a job ID if successfully added
-out=$(curl -s -H "Content-Type:application/json" ${URL} -w "%{http_code}" --noproxy '*' -d "$(cat <<EOF
+# if you want to force no proxy setting then use `--noproxy '*' ` with the curl command 
+out=$(curl -s -H "Content-Type:application/json" ${URL} -w "%{http_code}" -d "$(cat <<EOF
 {"id":"${USERID}",
 "host":"$(hostname)",
 "job":"${JOBNAME}",
