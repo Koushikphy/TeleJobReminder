@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # URL of the bot server
-URL='https://telejobreminder.fly.dev/api/'
+URL='https://telejobreminder.onrender.com/api/'
 usage="
 Run this script as:
 

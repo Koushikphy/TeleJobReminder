@@ -360,7 +360,8 @@ def getMessage():
 @server.route("/")
 def webhook():
     bot.remove_webhook()
-    bot.set_webhook(url=webHookURL + TOKEN)
+    bot.set_webhook(url=webHookURL +'/'+ TOKEN)
+    #^ The webhook URL should contain 
     return '''<div style="text-align: center;">
     <h1>Jobs Reminder</h1>
     <h3>A Telegram bot that notifies you about your computer jobs.</h3>
